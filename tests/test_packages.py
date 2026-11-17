@@ -81,6 +81,39 @@ class PackageTests(unittest.TestCase):
         with self.assertRaises(PackageError):
             download_product(FakeApi(), self.root / "fresh-products", "verzum")
 
+    def test_chunked_download_is_joined_and_verified(self):
+        archive, sha = self.archive({"hid/test.dll": b"x" * 5000})
+        raw = archive.read_bytes()
+        size = 700
+        chunks = [raw[i:i + size] for i in range(0, len(raw), size)]
+        info = {"version": "1.1.1", "sha256": sha, "groesse": len(raw), "teile": len(chunks),
+                "url": "https://sirosix-server.sirosix.workers.dev/datei/example"}
+        asked = []
+        class FakeApi:
+            file_path = Api().file_path
+            def download_info(self, product):
+                return info
+            def file_part(inner, path, nr):
+                asked.append((path, nr))
+                return chunks[nr]
+            def open(inner, path):
+                self.fail("Chunked packages must not use the single-file route")
+        exe = download_product(FakeApi(), self.root / "products", "verzum")
+        self.assertTrue(exe.exists())
+        self.assertEqual(asked, [("/datei/example", i) for i in range(len(chunks))])
+        chunks[1] = b"y" * len(chunks[1])
+        with self.assertRaises(PackageError):
+            download_product(FakeApi(), self.root / "other", "verzum")
+
+    def test_api_decodes_base64_parts(self):
+        import base64
+        api = Api("t")
+        class Resp(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        api.open = lambda path, timeout=20: Resp(base64.b64encode(b"teil-daten"))
+        self.assertEqual(api.file_part("/datei/x", 3), b"teil-daten")
+
     def test_current_install_is_verified_without_downloading_again(self):
         archive, sha = self.archive({"hid/test.dll": b"fixture"})
         install_archive(archive, self.root / "products", "verzum", "1.1.1", sha)

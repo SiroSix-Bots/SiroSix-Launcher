@@ -9,7 +9,7 @@ import stat
 import tempfile
 import zipfile
 
-MAX_DOWNLOAD = 100 * 1024 * 1024
+MAX_DOWNLOAD = 200 * 1024 * 1024
 MAX_EXTRACTED = 512 * 1024 * 1024
 EXECUTABLES = {"verzum": "SiroSix-Verzum-Bot.exe", "rubinum": "SiroSix-Rubinum-Bot.exe"}
 VERSION_RE = re.compile(r"[0-9]+(?:\.[0-9]+){1,3}(?:-[A-Za-z0-9.]+)?\Z")
@@ -134,18 +134,32 @@ def download_product(api, root, product, progress=lambda done, total: None,
         except (KeyError, OSError, ValueError):
             raise PackageError("Die vorhandene Installation ist beschädigt. Bitte den Support kontaktieren.") from None
     path = api.file_path(info["url"])
+    parts = info.get("teile", 0)
+    if not isinstance(parts, int) or not 0 <= parts <= 400:
+        raise PackageError("Die Produktinformationen sind ungültig.")
     Path(root).mkdir(parents=True, exist_ok=True)
     fd, filename = tempfile.mkstemp(prefix=".download-", suffix=".zip", dir=root)
     try:
         phase("download", "Version " + version + " wird heruntergeladen.")
-        with os.fdopen(fd, "wb") as target, api.open(path) as response:
+        with os.fdopen(fd, "wb") as target:
             done = 0
-            while block := response.read(256 * 1024):
-                done += len(block)
-                if done > info["groesse"] or done > MAX_DOWNLOAD:
-                    raise PackageError("Der Download ist größer als angekündigt.")
-                target.write(block)
-                progress(done, info["groesse"])
+            if parts:
+                # Große Pakete kommen Stück für Stück als Base64 (Server-Limit pro Anfrage).
+                for nr in range(parts):
+                    block = api.file_part(path, nr)
+                    done += len(block)
+                    if done > info["groesse"] or done > MAX_DOWNLOAD:
+                        raise PackageError("Der Download ist größer als angekündigt.")
+                    target.write(block)
+                    progress(done, info["groesse"])
+            else:
+                with api.open(path) as response:
+                    while block := response.read(256 * 1024):
+                        done += len(block)
+                        if done > info["groesse"] or done > MAX_DOWNLOAD:
+                            raise PackageError("Der Download ist größer als angekündigt.")
+                        target.write(block)
+                        progress(done, info["groesse"])
         if done != info["groesse"]:
             raise PackageError("Der Download ist unvollständig.")
         phase("verify", "Prüfsumme, Paketinhalt und Installation werden geprüft.")

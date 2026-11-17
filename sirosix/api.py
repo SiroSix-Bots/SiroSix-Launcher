@@ -3,6 +3,7 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+from . import VERSION
 
 BASE_URL = "https://sirosix-server.sirosix.workers.dev"
 PUBLIC_KEY = "cP_VJ8CIAigr8Z7R4wtrLwENK5Mhdjba-Ihy1iZ--ag"
@@ -38,7 +39,7 @@ class Api:
     def open(self, path, data=None, method=None, timeout=20):
         if not path.startswith("/") or path.startswith("//"):
             raise ValueError("Ungültiger Serverpfad.")
-        headers = {"User-Agent": "SiroSix-Launcher/0.1.0", "Accept": "application/json"}
+        headers = {"User-Agent": "SiroSix-Launcher/" + VERSION, "Accept": "application/json"}
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
         raw = None
@@ -80,6 +81,23 @@ class Api:
         if product not in ("verzum", "rubinum"):
             raise ValueError("Unbekanntes Produkt.")
         return self.request("/download/" + product)
+
+    def file_part(self, path, nr):
+        """Ein Paketstück als Bytes (Server liefert Base64-Text), mit Wiederholung bei Netzfehlern."""
+        import base64
+        import binascii
+        import time
+        for attempt in range(4):
+            try:
+                with self.open(f"{path}/{int(nr)}", timeout=60) as response:
+                    raw = response.read(3 * 1024 * 1024)
+                return base64.b64decode(raw, validate=True)
+            except (binascii.Error, ValueError):
+                raise NetworkError("Ein Paketstück war beschädigt.") from None
+            except NetworkError:
+                if attempt == 3:
+                    raise
+                time.sleep(1 + attempt * 2)
 
     def file_path(self, url):
         expected, actual = urllib.parse.urlsplit(self.base_url), urllib.parse.urlsplit(url)

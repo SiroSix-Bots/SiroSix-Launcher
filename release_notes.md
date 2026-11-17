@@ -1,5 +1,3 @@
-Erste Version des SiroSix Launchers.
+Launcher 0.1.1
 
-- Anmeldung mit Discord
-- Übersicht deiner Tools und Lizenzen
-- Start der SiroSix Bots mit automatischem Download und Prüfung
+- Große Bot-Pakete werden in Stücken geladen und danach vollständig geprüft.
