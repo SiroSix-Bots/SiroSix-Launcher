@@ -28,6 +28,16 @@ TEXT, MUTED, BLUE, GREEN = "#e7eef9", "#8c9eb8", "#5679f8", "#42d7ac"
 
 
 class Launcher(ctk.CTk):
+    def report_callback_exception(self, exc, val, tb):
+        # Fehler in Tk-Callbacks nicht still verschlucken, sondern protokollieren
+        try:
+            import traceback
+            from .windows import data_dir
+            with open(data_dir() / "launcher.log", "a", encoding="utf-8") as f:
+                f.write("Fehler in der Oberfläche:\n" + "".join(traceback.format_exception(exc, val, tb)))
+        except Exception:
+            pass
+
     def __init__(self, demo=False):
         super().__init__()
         self.title("SiroSix Launcher · Vorschau" if demo else "SiroSix Launcher")

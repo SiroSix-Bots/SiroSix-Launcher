@@ -1,3 +1,3 @@
-Launcher 0.1.1
+Launcher 0.1.2
 
-- Große Bot-Pakete werden in Stücken geladen und danach vollständig geprüft.
+- Start- und Fehlerprotokoll, damit Probleme beim Start sichtbar werden.
