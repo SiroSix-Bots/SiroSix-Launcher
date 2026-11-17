@@ -22,9 +22,14 @@ from .windows import SecureStore, data_dir, hardware_id, short_hwid
 from .packages import PackageError, EXECUTABLES, VERSION_RE
 from .startup import start_product, STEPS
 from .updates import check_release, download_release
+from . import i18n
+from .i18n import tr
 
-BG, PANEL, BORDER = "#0b1018", "#131d2a", "#25354a"
-TEXT, MUTED, BLUE, GREEN = "#e7eef9", "#8c9eb8", "#5679f8", "#42d7ac"
+SERVERNAMEN = {"verzum": "Verzum", "rubinum": "Rubinum Classic"}
+PRODUKTNAMEN = {"verzum": "S6 Farmbot · Verzum", "rubinum": "S6 Farmbot · Rubinum Classic"}
+BG, PANEL, BORDER = "#0a0806", "#15100b", "#4a3720"
+TEXT, MUTED, BLUE, GREEN = "#f0e6d2", "#a39276", "#e3b45a", "#4fd18b"
+GOLD, SIDE, SEL, BTN2, ON_GOLD = "#f2c46d", "#110d09", "#2a2014", "#2a2014", "#1b1206"
 
 
 class Launcher(ctk.CTk):
@@ -40,7 +45,7 @@ class Launcher(ctk.CTk):
 
     def __init__(self, demo=False):
         super().__init__()
-        self.title("SiroSix Launcher · Vorschau" if demo else "SiroSix Launcher")
+        self.title("S6 Launcher · Vorschau" if demo else "S6 Launcher")
         icon = Path(__file__).resolve().parent.parent / "assets" / "sirosix.ico"
         if icon.is_file():
             self.iconbitmap(str(icon))
@@ -73,13 +78,17 @@ class Launcher(ctk.CTk):
     def _layout(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        sidebar = ctk.CTkFrame(self, width=244, corner_radius=0, fg_color="#101925")
+        sidebar = ctk.CTkFrame(self, width=244, corner_radius=0, fg_color=SIDE)
         sidebar.grid(row=0, column=0, sticky="nsew")
         sidebar.grid_propagate(False)
         sidebar.grid_columnconfigure(0, weight=1)
         sidebar.grid_rowconfigure(3, weight=1)
-        ctk.CTkLabel(sidebar, text="S6", font=("Segoe UI", 38, "bold"), text_color=BLUE).grid(row=0, column=0, sticky="w", padx=26, pady=(25, 0))
-        ctk.CTkLabel(sidebar, text="SIROSIX", font=("Segoe UI", 21, "bold"), text_color=TEXT).grid(row=1, column=0, sticky="w", padx=26)
+        marke = ctk.CTkFrame(sidebar, fg_color="transparent")
+        marke.grid(row=0, column=0, sticky="w", padx=24, pady=(24, 0))
+        ctk.CTkLabel(marke, text="S6", font=("Bahnschrift", 40, "bold"), text_color=BLUE).pack(side="left")
+        ctk.CTkLabel(marke, text=" FARMBOT", font=("Bahnschrift", 22, "bold"), text_color=GOLD).pack(side="left", pady=(10, 0))
+        ctk.CTkLabel(sidebar, text="LAUNCHER", font=("Bahnschrift", 13, "bold"), text_color=MUTED).grid(row=1, column=0, sticky="w", padx=27)
+        ctk.CTkFrame(sidebar, height=2, fg_color=BLUE, corner_radius=0).grid(row=1, column=0, sticky="sew", padx=24, pady=(0, 0))
         ctk.CTkLabel(sidebar, text="DEINE TOOLS", font=("Segoe UI", 10, "bold"), text_color=MUTED).grid(row=2, column=0, sticky="w", padx=27, pady=(27, 10))
         self.tool_list = ctk.CTkScrollableFrame(sidebar, fg_color="transparent", corner_radius=0)
         self.tool_list.grid(row=3, column=0, sticky="nsew", padx=12)
@@ -89,6 +98,14 @@ class Launcher(ctk.CTk):
                       command=lambda: webbrowser.open(DISCORD_URL)).pack(fill="x")
         ctk.CTkButton(bottom, text="Datenschutz", anchor="w", height=36, fg_color="transparent", hover_color=PANEL,
                       command=self._privacy).pack(fill="x")
+        sprache = ctk.CTkFrame(bottom, fg_color="transparent")
+        sprache.pack(fill="x", padx=8, pady=(6, 0))
+        ctk.CTkLabel(sprache, text=tr("Sprache"), text_color=MUTED, font=("Segoe UI", 11)).pack(side="left")
+        self.language = ctk.StringVar(value=i18n.name())
+        ctk.CTkOptionMenu(sprache, variable=self.language, values=[n for _c, n in i18n.SPRACHEN], width=120, height=28,
+                          corner_radius=3, fg_color=PANEL, button_color=BORDER, button_hover_color=SEL, text_color=TEXT,
+                          dropdown_fg_color=PANEL, dropdown_hover_color=SEL, dropdown_text_color=TEXT,
+                          command=self._language).pack(side="right")
         self.update_button = ctk.CTkButton(bottom, text="Launcher-Update prüfen", anchor="w", height=36, fg_color="transparent", hover_color=PANEL,
                                            command=lambda: self.run(self._check_update))
         self.update_button.pack(fill="x")
@@ -108,7 +125,7 @@ class Launcher(ctk.CTk):
         account.grid(row=1, column=0, sticky="ew", pady=(0, 18))
         account.grid_columnconfigure(1, weight=1)
         self.account_avatar = ctk.CTkLabel(account, text="S6", font=("Segoe UI", 20, "bold"), width=46, height=46,
-                                           fg_color="#223454", corner_radius=12, text_color=TEXT)
+                                           fg_color=SEL, corner_radius=5, text_color=GOLD)
         self.account_avatar.grid(row=0, column=0, rowspan=2, padx=(18, 14), pady=(17, 8))
         self.account_title = ctk.CTkLabel(account, text="Willkommen bei SiroSix", font=("Segoe UI", 16, "bold"), text_color=TEXT, anchor="w")
         self.account_title.grid(row=0, column=1, sticky="ew", padx=(0, 18), pady=(17, 0))
@@ -116,16 +133,16 @@ class Launcher(ctk.CTk):
         self.account_sub.grid(row=1, column=1, sticky="ew", padx=(0, 18), pady=(0, 8))
         row = ctk.CTkFrame(account, fg_color="transparent")
         row.grid(row=2, column=0, columnspan=2, sticky="ew", padx=18, pady=(4, 16))
-        self.login_button = ctk.CTkButton(row, text="Mit Discord anmelden", fg_color=BLUE, hover_color="#4467dc",
+        self.login_button = ctk.CTkButton(row, text="Mit Discord anmelden", fg_color=BLUE, hover_color="#c99a3e", text_color=ON_GOLD, corner_radius=4,
                                          command=lambda: self.run(self._login))
         self.login_button.pack(side="left")
         self.remember = ctk.BooleanVar(value=False)
         self.remember_check = ctk.CTkCheckBox(row, text="Angemeldet bleiben", variable=self.remember, text_color=MUTED,
-                                             checkbox_width=19, checkbox_height=19)
+                                             checkbox_width=19, checkbox_height=19, corner_radius=3, fg_color=BLUE, hover_color="#c99a3e", checkmark_color=ON_GOLD, border_color=BORDER)
         self.remember_check.pack(side="left", padx=18)
-        self.logout_button = ctk.CTkButton(row, text="Abmelden", width=96, fg_color="#25354a",
+        self.logout_button = ctk.CTkButton(row, text="Abmelden", width=96, fg_color=BTN2,
                                           command=lambda: self.run(self._logout))
-        self.copy_hwid_button = ctk.CTkButton(row, text="HWID kopieren", width=116, fg_color="#25354a", command=self._copy_hwid)
+        self.copy_hwid_button = ctk.CTkButton(row, text="HWID kopieren", width=116, fg_color=BTN2, command=self._copy_hwid)
         self.pc_label = ctk.CTkLabel(row, text="", text_color=MUTED, font=("Consolas", 12))
         self.product_area = ctk.CTkScrollableFrame(main, fg_color="transparent", corner_radius=0)
         self.product_area.grid(row=2, column=0, sticky="nsew", pady=(0, 12))
@@ -194,7 +211,7 @@ class Launcher(ctk.CTk):
                 elif kind == "update_ready":
                     release, downloaded = value
                     current = Path(sys.argv[0]).resolve()
-                    if current.name == "SiroSix-Launcher.exe" and messagebox.askyesno("SiroSix Update", "Version " + release["version"] + " ist geprüft und bereit. Launcher jetzt neu starten und aktualisieren?", parent=self):
+                    if current.suffix.lower() == ".exe" and messagebox.askyesno("SiroSix Update", "Version " + release["version"] + " ist geprüft und bereit. Launcher jetzt neu starten und aktualisieren?", parent=self):
                         subprocess.Popen([str(downloaded), "--apply-update", str(current), str(os.getpid()), release["sha256"]], close_fds=True)
                         self._close()
                         return
@@ -212,7 +229,7 @@ class Launcher(ctk.CTk):
                 if key in self.tool_buttons:
                     product = next((p for p in self.products if p["kuerzel"] == key), {})
                     badge, _ = self._license_status(product, self.snapshot is not None)
-                    self.tool_buttons[key].configure(text=product.get("name", key).removeprefix("SiroSix ") + "\n" + badge)
+                    self.tool_buttons[key].configure(text=SERVERNAMEN.get(key, self._name(product)) + "\n" + tr(badge))
         self.after(80, self._pump)
 
     def _refresh_action_state(self):
@@ -325,7 +342,7 @@ class Launcher(ctk.CTk):
 
     def _products(self, products):
         if not products:
-            products = [{"kuerzel": p, "name": "SiroSix " + p.title() + " Bot", "lizenz": None}
+            products = [{"kuerzel": p, "name": PRODUKTNAMEN[p], "lizenz": None}
                         for p in ("verzum", "rubinum")]
         self.products = products
         for child in self.tool_list.winfo_children():
@@ -334,12 +351,13 @@ class Launcher(ctk.CTk):
         for product in self.products:
             key = product["kuerzel"]
             active = bool((product.get("lizenz") or {}).get("aktiv"))
-            name = product["name"].removeprefix("SiroSix ")
+            name = SERVERNAMEN.get(key, self._name(product))
             process = self.children_running.get(key)
             badge = "Tool läuft" if process and process.poll() is None else "Lizenz aktiv" if active else "Keine aktive Lizenz"
             button = ctk.CTkButton(self.tool_list, text=name + "\n" + badge,
                                    anchor="w", height=66, font=("Segoe UI", 13), fg_color="transparent",
-                                   hover_color="#223454", border_spacing=14, command=lambda k=key: self._select_product(k))
+                                   hover_color=SEL, border_spacing=10, corner_radius=4, image=self._logo(key, 38), compound="left",
+                                   command=lambda k=key: self._select_product(k))
             button.pack(fill="x", pady=(0, 8))
             self.tool_buttons[key] = button
         if self.selected_key not in self.tool_buttons:
@@ -366,17 +384,22 @@ class Launcher(ctk.CTk):
             return
         self.selected_key = key
         for k, button in self.tool_buttons.items():
-            button.configure(fg_color="#223454" if k == key else "transparent")
+            button.configure(fg_color=SEL if k == key else "transparent")
         for child in self.product_area.winfo_children():
             child.destroy()
         self.product_area.grid_columnconfigure(0, weight=1)
-        card = ctk.CTkFrame(self.product_area, fg_color=PANEL, border_width=1, border_color=BORDER, corner_radius=14)
+        card = ctk.CTkFrame(self.product_area, fg_color=PANEL, border_width=1, border_color=BORDER, corner_radius=6)
         card.grid(row=0, column=0, sticky="ew", padx=(0, 3))
         card.grid_columnconfigure(0, weight=1)
         status, color = self._license_status(product, self.snapshot is not None)
-        ctk.CTkLabel(card, text=status.upper(), font=("Segoe UI", 10, "bold"), text_color=color).grid(row=0, column=0, sticky="w", padx=22, pady=(20, 4))
-        ctk.CTkLabel(card, text=product["name"], font=("Segoe UI", 23, "bold"), text_color=TEXT, anchor="w", wraplength=560,
-                     justify="left").grid(row=1, column=0, sticky="ew", padx=22)
+        ctk.CTkLabel(card, text=tr(status).upper(), font=("Segoe UI", 10, "bold"), text_color=color).grid(row=0, column=0, sticky="w", padx=22, pady=(20, 4))
+        titel = ctk.CTkFrame(card, fg_color="transparent")
+        titel.grid(row=1, column=0, sticky="ew", padx=22)
+        logo = self._logo(key, 56)
+        if logo is not None:
+            ctk.CTkLabel(titel, text="", image=logo).pack(side="left", padx=(0, 14))
+        ctk.CTkLabel(titel, text=product["name"], font=("Bahnschrift", 24, "bold"), text_color=GOLD, anchor="w", wraplength=480,
+                     justify="left").pack(side="left")
         ctk.CTkLabel(card, text="Produktinformationen und deine persönliche Freigabe.", text_color=MUTED,
                      anchor="w", wraplength=560, justify="left").grid(row=2, column=0, sticky="ew", padx=22, pady=(1, 18))
         license = product.get("lizenz") or {}
@@ -390,7 +413,7 @@ class Launcher(ctk.CTk):
             ("Lizenzmodell", license_type),
             ("Gültig bis", duration),
             ("Freigegebene Clients", str(license.get("slots", "—"))),
-            ("Gebundener PC", (license.get("pc") or "Wird beim ersten Start gebunden") if license else "Keine Lizenz gebunden"),
+            ("Gebundener PC", "unbegrenzt" if license.get("pc_unbegrenzt") else (license.get("pc") or "Wird beim ersten Start gebunden") if license else "Keine Lizenz gebunden"),
             ("Kostenloser PC-Wechsel", "Verfügbar" if license.get("pc_wechsel_frei") else "Bereits genutzt" if license else "—"),
         ]
         facts = ctk.CTkFrame(card, fg_color="transparent")
@@ -401,15 +424,15 @@ class Launcher(ctk.CTk):
             ctk.CTkLabel(facts, text=value, text_color=TEXT, anchor="w", justify="left", wraplength=330,
                          height=22, font=("Segoe UI", 12)).grid(row=row, column=1, sticky="ew", pady=2)
         if not hasattr(self, "action_area"):
-            self.action_area = ctk.CTkFrame(self.main_area, fg_color=PANEL, corner_radius=12, border_width=1, border_color=BORDER)
+            self.action_area = ctk.CTkFrame(self.main_area, fg_color=PANEL, corner_radius=6, border_width=1, border_color=BORDER)
         for child in self.action_area.winfo_children():
             child.destroy()
         actions = ctk.CTkFrame(self.action_area, fg_color="transparent")
         actions.pack(fill="x", padx=18, pady=12)
-        self.start_button = ctk.CTkButton(actions, text="Starten", width=148, height=40, fg_color=BLUE, hover_color="#4467dc",
-                                         font=("Segoe UI", 14, "bold"), command=lambda: self._begin_start(product))
+        self.start_button = ctk.CTkButton(actions, text="Starten", width=148, height=40, fg_color=BLUE, hover_color="#c99a3e",
+                                         text_color=ON_GOLD, corner_radius=4, font=("Bahnschrift", 15, "bold"), command=lambda: self._begin_start(product))
         self.start_button.pack(side="left")
-        self.change_button = ctk.CTkButton(actions, text="PC wechseln", width=120, height=40, fg_color="#25354a",
+        self.change_button = ctk.CTkButton(actions, text="PC wechseln", width=120, height=40, fg_color=BTN2,
                                           command=lambda: self._change_confirm(product))
         self.change_button.pack(side="left", padx=10)
         note = "Beim Start werden Lizenz, Updates und alle Programmdateien geprüft."
@@ -460,10 +483,10 @@ class Launcher(ctk.CTk):
         overlay.lift()
         overlay.grid_columnconfigure(0, weight=1)
         overlay.grid_rowconfigure((0, 2), weight=1)
-        card = ctk.CTkFrame(overlay, fg_color=PANEL, border_width=1, border_color=BORDER, corner_radius=18)
+        card = ctk.CTkFrame(overlay, fg_color=PANEL, border_width=1, border_color=BORDER, corner_radius=6)
         card.grid(row=1, column=0, sticky="ew", padx=24, pady=20)
         card.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(card, text="S6", font=("Segoe UI", 34, "bold"), text_color=BLUE).grid(row=0, column=0, pady=(24, 4))
+        ctk.CTkLabel(card, text="", image=self._logo(product["kuerzel"], 64)).grid(row=0, column=0, pady=(24, 4))
         self.loading_title = ctk.CTkLabel(card, text="Vorschau · Startprüfung" if self.demo else "Start wird vorbereitet", font=("Segoe UI", 21, "bold"), text_color=TEXT)
         self.loading_title.grid(row=1, column=0, padx=24)
         ctk.CTkLabel(card, text=product["name"], text_color=MUTED, wraplength=500).grid(row=2, column=0, padx=24, pady=(0, 20))
@@ -480,7 +503,7 @@ class Launcher(ctk.CTk):
         self.loading_detail = ctk.CTkLabel(card, text="Verbindung zum Lizenzserver wird hergestellt …", text_color=MUTED,
                                           font=("Segoe UI", 12), justify="left", anchor="w", wraplength=480)
         self.loading_detail.grid(row=5, column=0, sticky="ew", padx=32, pady=(0, 24))
-        self.loading_close = ctk.CTkButton(card, text="Zurück zur Übersicht", command=self._dismiss_loading, fg_color="#25354a")
+        self.loading_close = ctk.CTkButton(card, text="Zurück zur Übersicht", command=self._dismiss_loading, fg_color=BTN2)
         if self.demo:
             self.loading_close.grid(row=6, column=0, padx=32, pady=(0, 24), sticky="w")
 
@@ -573,7 +596,7 @@ class Launcher(ctk.CTk):
         self.events.put(("status", "Abgemeldet." if server_ok else "Auf diesem PC abgemeldet. Der Server war nicht erreichbar; die Serversitzung konnte noch nicht beendet werden."))
 
     def _privacy(self):
-        messagebox.showinfo("SiroSix Datenschutz", "SiroSix verarbeitet deine Discord-ID, deinen Discord-Anzeigenamen und dein Avatar-Kürzel, Lizenzdaten sowie einen Hash deiner PC-Kennung. Die Hardware-Rohdaten verlassen deinen PC nicht. Die Sitzung wird auf diesem Windows-Konto verschlüsselt gespeichert. Discord, Cloudflare und GitHub werden für Anmeldung, Lizenzen und Updates verwendet. Dein Discord-Passwort erhält SiroSix nicht.\n\nKontakt: sirosix@proton.me\n\nDies ist ein technischer Hinweis. Aufbewahrungsfristen und die vollständige Datenschutzerklärung müssen vor einem öffentlichen Verkaufsstart ergänzt werden.", parent=self)
+        messagebox.showinfo("S6 Datenschutz", "S6 Farmbot verarbeitet deine Discord-ID, deinen Discord-Anzeigenamen und dein Avatar-Kürzel, Lizenzdaten sowie einen Hash deiner PC-Kennung. Die Hardware-Rohdaten verlassen deinen PC nicht. Die Sitzung wird auf diesem Windows-Konto verschlüsselt gespeichert. Discord, Cloudflare und GitHub werden für Anmeldung, Lizenzen und Updates verwendet. Dein Discord-Passwort erhalten wir nicht.\n\nKontakt: sirosix@proton.me\n\nDies ist ein technischer Hinweis. Aufbewahrungsfristen und die vollständige Datenschutzerklärung müssen vor einem öffentlichen Verkaufsstart ergänzt werden.", parent=self)
 
     def _check_update(self):
         release = check_release()
@@ -585,12 +608,49 @@ class Launcher(ctk.CTk):
 
     def _show_demo(self):
         self.hwid = "a3f9" + "0" * 56 + "7c21"
-        self._account({"nutzer": {"id": "demo", "name": "SiroSix"}, "produkte": [
-            {"kuerzel": "verzum", "name": "SiroSix Verzum Bot", "version": "1.1.1", "lizenz": {"aktiv": True, "art": "zeit", "laeuft_ab": (time.time() + 7 * 86400) * 1000, "slots": 1, "pc": "A3F9...7C21", "pc_wechsel_frei": True}},
-            {"kuerzel": "rubinum", "name": "SiroSix Rubinum Bot", "version": None, "lizenz": None},
+        self._account({"nutzer": {"id": "demo", "name": "S6"}, "produkte": [
+            {"kuerzel": "verzum", "name": "S6 Farmbot · Verzum", "version": "1.1.1", "lizenz": {"aktiv": True, "art": "zeit", "laeuft_ab": (time.time() + 7 * 86400) * 1000, "slots": 1, "pc": "A3F9...7C21", "pc_wechsel_frei": True}},
+            {"kuerzel": "rubinum", "name": "S6 Farmbot · Rubinum Classic", "version": None, "lizenz": None},
         ]})
         self.status.configure(text="Vorschau mit Beispieldaten. Kein Login, kein Download, kein Spielstart.")
         self._enable(True)
+
+    def _logo(self, key, size):
+        cache = self.__dict__.setdefault("_logos", {})
+        if (key, size) not in cache:
+            try:
+                import base64
+                from . import logos
+                raw = base64.b64decode(getattr(logos, key.upper()))
+                image = Image.open(io.BytesIO(raw)).convert("RGBA")
+                cache[(key, size)] = ctk.CTkImage(image, size=(size, size))
+            except Exception:
+                cache[(key, size)] = None
+        return cache[(key, size)]
+
+    @staticmethod
+    def _name(product):
+        return PRODUKTNAMEN.get(product.get("kuerzel"), product.get("name", ""))
+
+    def _language(self, shown):
+        code = {n: c for c, n in i18n.SPRACHEN}.get(shown, "de")
+        if code == i18n.sprache():
+            return
+        if self.busy or self.loading_overlay:
+            self.language.set(i18n.name())
+            return
+        i18n.setzen(code, merken=True)
+        # Oberfläche in der neuen Sprache neu aufbauen, Anmeldung und Daten bleiben.
+        for child in list(self.winfo_children()):
+            child.destroy()
+        for attribute in ("action_area", "start_button", "change_button"):
+            self.__dict__.pop(attribute, None)
+        self.title("S6 Launcher · Vorschau" if self.demo else "S6 Launcher")
+        self._layout()
+        self._account(self.snapshot)
+        if self.avatar_image is not None and self.snapshot is not None:
+            self.account_avatar.configure(image=self.avatar_image, text="")
+        self._enable(not self.busy)
 
     def _close(self):
         self.cancel_login.set()
@@ -598,6 +658,8 @@ class Launcher(ctk.CTk):
 
 
 def main():
+    i18n.setzen(i18n.gespeichert())
+    i18n.installieren(ctk)
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")
     app = Launcher(demo="--demo" in sys.argv)

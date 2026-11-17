@@ -77,6 +77,7 @@ def main(product):
         import json
         # Interner Build-Test: keine Anmeldung, keine Spielfenstersuche, keine Eingaben.
         target = Path(sys.executable).parent / "self-test.json"
+        from . import modmenu, i18n, texte, logos  # noqa: F401  (im Paket enthalten?)
         target.write_text(json.dumps({"product": product, "imports": True, "input_allowed": input_allowed()}), "utf-8")
         return
     app_holder = []
@@ -116,6 +117,9 @@ def main(product):
         # Entwicklungs-Fernsteuerung wird in Produktbuilds vollständig deaktiviert.
         bot.App._test_befehl = lambda self: None
         bot.ctk.set_appearance_mode("dark")
+        # S6 Farmbot Oberfläche: Sprache, Server-Design, Overlay
+        from . import modmenu
+        modmenu.anwenden(bot, product)
         if bot._schon_eine_instanz_offen():
             raise RuntimeError("Dieser SiroSix Bot läuft bereits.")
         root = bot.ctk.CTk()
@@ -135,7 +139,9 @@ def main(product):
     except Exception as e:
         # Netzwerk- und Lizenzfehler enthalten keine Zugangsdaten.
         message = str(e) if e.__class__.__module__.startswith("sirosix") or isinstance(e, RuntimeError) else "Der Bot konnte nicht sicher gestartet werden. Bitte im Launcher erneut versuchen."
-        ctypes.windll.user32.MessageBoxW(None, message, "SiroSix", 0x10)
+        from .i18n import tr, setzen, gespeichert
+        setzen(gespeichert())
+        ctypes.windll.user32.MessageBoxW(None, tr(message), "S6 Farmbot", 0x10)
     finally:
         if _guard is not None:
             _guard.close()

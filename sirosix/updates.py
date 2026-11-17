@@ -88,7 +88,7 @@ def apply_update(source, target, previous_pid, expected_sha):
     import shutil
     import subprocess
     source, target = Path(source).resolve(), Path(target).resolve()
-    if source == target or target.name != ASSET_NAME or source.name != ASSET_NAME or not target.is_file():
+    if source == target or target.suffix.lower() != ".exe" or source.name != ASSET_NAME or not target.is_file():
         raise RuntimeError("Ungültiges Launcher-Updateziel.")
     if not re.fullmatch(r"[0-9a-f]{64}", expected_sha) or hashlib.sha256(source.read_bytes()).hexdigest() != expected_sha:
         raise RuntimeError("Die Update-Datei wurde nach dem Download verändert.")
@@ -108,8 +108,8 @@ def apply_update(source, target, previous_pid, expected_sha):
                 raise RuntimeError("Der bisherige Launcher wurde noch nicht beendet.")
         finally:
             kernel.CloseHandle(handle)
-    backup = target.with_name("SiroSix-Launcher.previous.exe")
-    temporary = target.with_name(".SiroSix-Launcher.update.tmp")
+    backup = target.with_name(target.stem + ".previous.exe")
+    temporary = target.with_name("." + target.stem + ".update.tmp")
     old_moved = False
     try:
         shutil.copy2(source, temporary)

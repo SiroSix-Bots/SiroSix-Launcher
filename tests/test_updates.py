@@ -10,9 +10,9 @@ from sirosix.updates import check_release, version_tuple, apply_update
 
 class UpdateTests(unittest.TestCase):
     def release(self, **asset):
-        return {"tag_name": "v0.2.0", "assets": [{"name": "SiroSix-Launcher.exe", "size": 1024,
+        return {"tag_name": "v9.2.0", "assets": [{"name": "SiroSix-Launcher.exe", "size": 1024,
                 "digest": "sha256:" + "a" * 64,
-                "browser_download_url": "https://github.com/SiroSix-Bots/SiroSix-Launcher/releases/download/v0.2.0/SiroSix-Launcher.exe", **asset}]}
+                "browser_download_url": "https://github.com/SiroSix-Bots/SiroSix-Launcher/releases/download/v9.2.0/SiroSix-Launcher.exe", **asset}]}
 
     def check(self, release):
         with patch("urllib.request.urlopen", return_value=io.BytesIO(json.dumps(release).encode())):
@@ -25,7 +25,7 @@ class UpdateTests(unittest.TestCase):
                 version_tuple(value)
 
     def test_only_verified_official_release_asset_is_accepted(self):
-        self.assertEqual(self.check(self.release())["version"], "v0.2.0")
+        self.assertEqual(self.check(self.release())["version"], "v9.2.0")
         for changes in ({"digest": None}, {"digest": "sha256:wrong"}, {"browser_download_url": "https://evil.test/app.exe"}, {"size": 200 * 1024 * 1024}):
             with self.subTest(changes=changes), self.assertRaises((RuntimeError, TypeError)):
                 self.check(self.release(**changes))
@@ -45,6 +45,18 @@ class UpdateTests(unittest.TestCase):
                 apply_update(source, target, 0, hashlib.sha256(source.read_bytes()).hexdigest())
             self.assertEqual(target.read_bytes(), b"MZ-new")
             self.assertEqual((root / "SiroSix-Launcher.previous.exe").read_bytes(), b"MZ-old")
+
+    def test_renamed_launcher_can_update(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "download").mkdir()
+            source, target = root / "download/SiroSix-Launcher.exe", root / "S6 Launcher.exe"
+            source.write_bytes(b"MZ-new")
+            target.write_bytes(b"MZ-old")
+            with patch("subprocess.Popen"):
+                apply_update(source, target, 0, hashlib.sha256(source.read_bytes()).hexdigest())
+            self.assertEqual(target.read_bytes(), b"MZ-new")
+            self.assertEqual((root / "S6 Launcher.previous.exe").read_bytes(), b"MZ-old")
 
     def test_update_rolls_back_when_restart_fails(self):
         with tempfile.TemporaryDirectory() as directory:
