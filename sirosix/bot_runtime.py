@@ -121,6 +121,16 @@ def main(product):
         root = bot.ctk.CTk()
         app = bot.App(root)
         app_holder.append(app)
+
+        def melden(text):
+            # Kurze Nachricht per Discord-DM an den eigenen Account (z. B. "Bot hängt").
+            def senden():
+                try:
+                    api.request("/meldung", {"produkt": product, "text": str(text)[:400]})
+                except Exception:
+                    pass
+            threading.Thread(target=senden, daemon=True, name="SiroSix-Meldung").start()
+        app.melden = melden
         root.mainloop()
     except Exception as e:
         # Netzwerk- und Lizenzfehler enthalten keine Zugangsdaten.
