@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.build/
+*.dist/
+*.onefile-build/
+*.dpapi
+*.zip
+*.exe
+test-results/
