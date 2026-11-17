@@ -1,3 +1,4 @@
-Launcher 0.1.2
+Launcher 0.1.3
 
-- Start- und Fehlerprotokoll, damit Probleme beim Start sichtbar werden.
+- Deine Bot Einstellungen bleiben bei einem Update erhalten.
+- Alte Bot Versionen werden automatisch aufgeräumt, nur die vorherige bleibt als Reserve.

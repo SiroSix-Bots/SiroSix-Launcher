@@ -36,6 +36,27 @@ class PackageTests(unittest.TestCase):
         with self.assertRaises(PackageError):
             checked_executable(exe.parent, "verzum")
 
+    def install_version(self, version, mtime):
+        import os
+        manifest = dict(self.manifest, version=version)
+        archive, sha = self.archive(manifest=manifest)
+        exe = install_archive(archive, self.root / "products", "verzum", version, sha)
+        os.utime(exe.parent, (mtime, mtime))
+        return exe.parent
+
+    def test_update_keeps_settings_and_prunes_old_versions(self):
+        v1 = self.install_version("1.1.0", 1000)
+        (v1 / "config.json").write_text('{"login_char_var": "Charakter 2"}', "utf-8")
+        import os
+        os.utime(v1, (1000, 1000))
+        v2 = self.install_version("1.1.1", 2000)
+        self.assertEqual((v2 / "config.json").read_text("utf-8"), '{"login_char_var": "Charakter 2"}')
+        checked_executable(v2, "verzum")
+        v3 = self.install_version("1.1.2", 3000)
+        self.assertTrue((v3 / "config.json").is_file())
+        self.assertFalse(v1.exists())
+        self.assertTrue(v2.exists())
+
     def test_bad_hash_never_installs(self):
         archive, _ = self.archive()
         with self.assertRaises(PackageError):

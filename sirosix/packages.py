@@ -88,12 +88,48 @@ def install_archive(archive, root, product, version, expected_sha):
                   for p in stage.rglob("*") if p.is_file()}
         (stage / ".installed.json").write_text(json.dumps({"sha256": expected_sha, "files": hashes}), "utf-8")
         os.replace(stage, target)
+        carry_user_files(parent, target)
+        prune_old_versions(parent, target)
         return target / EXECUTABLES[product]
     except (zipfile.BadZipFile, ValueError, OSError) as e:
         raise PackageError("Das Produktpaket konnte nicht sicher installiert werden.") from e
     finally:
         if stage.exists():
             shutil.rmtree(stage)
+
+
+USER_FILES = ("config.json",)
+KEEP_VERSIONS = 2
+
+
+def _version_dirs(parent, exclude):
+    dirs = [d for d in Path(parent).iterdir()
+            if d.is_dir() and d != exclude and VERSION_RE.fullmatch(d.name)]
+    return sorted(dirs, key=lambda d: d.stat().st_mtime, reverse=True)
+
+
+def carry_user_files(parent, target):
+    """Einstellungen aus der zuletzt genutzten Version in die neue übernehmen."""
+    try:
+        for name in USER_FILES:
+            if (target / name).exists():
+                continue
+            for old in _version_dirs(parent, target):
+                src = old / name
+                if src.is_file() and src.stat().st_size <= 1024 * 1024:
+                    shutil.copy2(src, target / name)
+                    break
+    except OSError:
+        pass
+
+
+def prune_old_versions(parent, target):
+    """Nur die neue und die vorherige Version behalten, ältere entfernen."""
+    try:
+        for old in _version_dirs(parent, target)[KEEP_VERSIONS - 1:]:
+            shutil.rmtree(old, ignore_errors=True)
+    except OSError:
+        pass
 
 
 def checked_executable(directory, product):
