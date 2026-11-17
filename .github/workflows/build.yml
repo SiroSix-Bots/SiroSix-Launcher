@@ -3,8 +3,12 @@ name: Launcher bauen
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      release:
+        description: "GitHub-Release mit der Version aus sirosix/__init__.py erstellen"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -59,8 +63,11 @@ jobs:
           retention-days: 14
 
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: inputs.release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $env:GITHUB_REF_NAME ausgabe\SiroSix-Launcher.exe --title "SiroSix Launcher $env:GITHUB_REF_NAME" --notes "SiroSix Launcher $env:GITHUB_REF_NAME"
+        run: |
+          $v = "v" + (python -c "import sirosix; print(sirosix.VERSION)")
+          $notes = if (Test-Path release_notes.md) { Get-Content release_notes.md -Raw } else { "SiroSix Launcher $v" }
+          gh release create $v ausgabe\SiroSix-Launcher.exe --target $env:GITHUB_SHA --title "SiroSix Launcher $v" --notes $notes
