@@ -62,6 +62,15 @@ TEXTE = {
     "Profil {}": ("Profile {}", "Profil {}", "Профиль {}", "Profil {}"),
 
     # ---------- Einstellungen ----------
+    "Farmmodus": ("Farming mode", "Farm modu", "Режим фарма", "Tryb farmienia"),
+    "Angeln": ("Fishing", "Balık tutma", "Рыбалка", "Łowienie"),
+    "Mit ausgerüsteter Angel am Wasser stehen und Start drücken.": ("Stand by the water with your fishing rod equipped and press Start.", "Oltanızı kuşanıp su kenarında durun ve Başlat'a basın.", "Экипируйте удочку, подойдите к воде и нажмите «Старт».", "Wyposaż wędkę, stań nad wodą i naciśnij Start."),
+    "[i] Angelmodus gestartet.": ("[i] Fishing mode started.", "[i] Balık tutma modu başladı.", "[i] Режим рыбалки запущен.", "[i] Uruchomiono tryb łowienia."),
+    "[STOP] Angeln wurde wegen eines Fehlers angehalten.": ("[STOP] Fishing stopped due to an error.", "[STOP] Balık tutma bir hata nedeniyle durduruldu.", "[STOP] Рыбалка остановлена из-за ошибки.", "[STOP] Łowienie zatrzymano z powodu błędu."),
+    "[STOP] Angeln angehalten. Das Spielfenster ist nicht im Vordergrund.": ("[STOP] Fishing stopped. The game window is not in the foreground.", "[STOP] Balık tutma durduruldu. Oyun penceresi ön planda değil.", "[STOP] Рыбалка остановлена. Окно игры не на переднем плане.", "[STOP] Łowienie zatrzymano. Okno gry jest w tle."),
+    "[STOP] Angeln angehalten. Das Spielfenster ist zu klein.": ("[STOP] Fishing stopped. The game window is too small.", "[STOP] Balık tutma durduruldu. Oyun penceresi çok küçük.", "[STOP] Рыбалка остановлена. Окно игры слишком маленькое.", "[STOP] Łowienie zatrzymano. Okno gry jest za małe."),
+    "[STOP] Angeln angehalten. Das Trefferfenster wurde nicht sicher erkannt. Bitte schau im Spiel nach.": ("[STOP] Fishing stopped. The target zone could not be detected reliably. Please check the game.", "[STOP] Balık tutma durduruldu. Hedef bölge güvenilir biçimde algılanamadı. Lütfen oyunu kontrol edin.", "[STOP] Рыбалка остановлена. Не удалось уверенно распознать зону попадания. Проверьте игру.", "[STOP] Łowienie zatrzymano. Nie udało się pewnie wykryć strefy trafienia. Sprawdź grę."),
+    "Neuer Modus Angeln. Der Bot erkennt das gelbe Trefferfenster und wartet zwischen den Versuchen.": ("New fishing mode. The bot detects the yellow target zone and waits between attempts.", "Yeni balık tutma modu. Bot sarı hedef bölgeyi algılar ve denemeler arasında bekler.", "Новый режим рыбалки. Бот распознаёт жёлтую зону попадания и ждёт между попытками.", "Nowy tryb łowienia. Bot wykrywa żółtą strefę trafienia i czeka przed kolejną próbą."),
     "Profil": ("Profile", "Profil", "Профиль", "Profil"),
     "Fünf Speicherplätze für komplette Einstellungen.": ("Five slots for complete settings.", "Tüm ayarlar için beş kayıt yeri.", "Пять слотов для полных настроек.", "Pięć miejsc na pełne ustawienia."),
     "Laden": ("Load", "Yükle", "Загрузить", "Wczytaj"),
