@@ -126,13 +126,19 @@ def main(product):
         app = bot.App(root)
         app_holder.append(app)
 
-        def melden(text):
+        def melden(text, *, art=None, fertig=None):
             # Kurze Nachricht per Discord-DM an den eigenen Account (z. B. "Bot hängt").
             def senden():
+                gesendet = False
                 try:
-                    api.request("/meldung", {"produkt": product, "text": str(text)[:400]})
+                    daten = {"produkt": product, "text": str(text)[:400]}
+                    if art is not None:
+                        daten["art"] = art
+                    gesendet = api.request("/meldung", daten).get("gesendet") is True
                 except Exception:
                     pass
+                if fertig is not None:
+                    app._ui(lambda: fertig(gesendet))
             threading.Thread(target=senden, daemon=True, name="SiroSix-Meldung").start()
         app.melden = melden
         root.mainloop()
