@@ -297,10 +297,16 @@ def _ui_bauen(self):
                          checkbox_width=18, checkbox_height=18, border_width=2, border_color=F.ACC_DIM,
                          fg_color=F.ACC, hover_color=F.ACC_H, checkmark_color=F.AUF_ACC)
     ov.grid(row=0, column=3, padx=(0, 16), sticky="e")
+    if _produkt == "verzum":
+        self._s6_overlay_knopf = ctk.CTkButton(
+            fuss, text="Overlay verschieben", width=142, height=30, corner_radius=3,
+            fg_color=F.CARD, hover_color=F.HOVER, text_color=F.TEXT, font=self.f_klein,
+            command=lambda: _overlay(self).verschieben())
+        self._s6_overlay_knopf.grid(row=0, column=4, padx=(0, 12), sticky="e")
     self.start_btn = ctk.CTkButton(fuss, text="▶   START", height=40, width=190, corner_radius=3,
                                    font=self.f_btn, fg_color=F.GREEN, hover_color=F.GREEN_H,
                                    text_color="#04130a", command=self._start_stop_knopf)
-    self.start_btn.grid(row=0, column=4, padx=(0, 14), pady=12, sticky="e")
+    self.start_btn.grid(row=0, column=5, padx=(0, 14), pady=12, sticky="e")
     self._start_knoepfe.append(self.start_btn)
 
     self._seite = None
@@ -588,7 +594,7 @@ class Overlay:
     Bildschirmaufnahmen sehen sie nicht (WDA_EXCLUDEFROMCAPTURE), damit die
     Bilderkennung des Bots unverändert bleibt. Ohne diesen Schutz wird nichts gezeigt."""
 
-    BREITE, HOEHE = 236, 78
+    MIN_BREITE = 236
 
     def __init__(self, app):
         self.app = app
@@ -596,6 +602,11 @@ class Overlay:
         self.geht = os.name == "nt"
         self._sichtbar = False
         self._labels = {}
+        self._position_datei = Path(_bot._ORDNER) / "overlay-position.json"
+        self._position = self._position_laden()
+        self._spiel = None
+        self._verschieben = False
+        self._drag = None
 
     def _bauen(self):
         ctk, F = _bot.ctk, _bot.F
@@ -634,7 +645,9 @@ class Overlay:
         self._labels["zahlen"] = ctk.CTkLabel(unten, text="", font=schrift, text_color=F.TEXT,
                                              height=18, anchor="w", justify="left")
         self._labels["zahlen"].pack(side="left")
-        w.geometry(f"{self.BREITE}x{self.HOEHE}+-2000+-2000")
+        # Tk übernimmt die angeforderte Größe der DPI-skalierten Widgets.
+        w.minsize(self.MIN_BREITE, 1)
+        w.geometry("+-2000+-2000")
         w.deiconify()
         w.update_idletasks()
         if not self._schuetzen(w):
@@ -642,8 +655,12 @@ class Overlay:
             self.geht = False
             self.app.log("[i] Overlay nicht verfügbar (Windows zu alt).")
             return
+        w.bind("<ButtonPress-1>", self._ziehen_start)
+        w.bind("<B1-Motion>", self._ziehen)
+        w.bind("<ButtonRelease-1>", self._ziehen_ende)
         w.withdraw()
         self.fenster = w
+        self._klickschutz()
 
     def _schuetzen(self, w):
         try:
@@ -657,6 +674,77 @@ class Overlay:
         except Exception:
             return False
 
+    def _position_laden(self):
+        try:
+            position = json.loads(self._position_datei.read_text("utf-8"))
+            if (isinstance(position, list) and len(position) == 2
+                    and all(type(n) in (float, int) and 0 <= n <= 1 for n in position)):
+                return tuple(position)
+        except (OSError, ValueError):
+            pass
+        return None
+
+    def _platz(self):
+        x, y, breite, hoehe = self._spiel
+        f = self.fenster
+        return x, y, max(0, breite - max(self.MIN_BREITE, f.winfo_reqwidth())), max(0, hoehe - f.winfo_reqheight())
+
+    def _klickschutz(self):
+        if self.fenster is None:
+            return
+        user32 = ctypes.windll.user32
+        hwnd = int(self.fenster.wm_frame(), 16)
+        stil = user32.GetWindowLongW(hwnd, -20)
+        user32.SetWindowLongW(hwnd, -20, stil & ~0x20 if self._verschieben else stil | 0x20)
+        self.fenster.configure(cursor="fleur" if self._verschieben else "")
+
+    def verschieben(self):
+        if not self.geht:
+            return
+        self._verschieben = not self._verschieben
+        if self._verschieben:
+            self.app._s6_overlay_an.set(True)
+        self._klickschutz()
+        self._verschiebe_knopf()
+
+    def _verschiebe_knopf(self):
+        knopf = getattr(self.app, "_s6_overlay_knopf", None)
+        if knopf is not None:
+            F = _bot.F
+            knopf.configure(text="Overlay jetzt ziehen" if self._verschieben else "Overlay verschieben",
+                            fg_color=F.ACC_DIM if self._verschieben else F.CARD)
+
+    def _ziehen_start(self, ereignis):
+        if self._verschieben and self._spiel is not None:
+            f = self.fenster
+            self._drag = ereignis.x_root - f.winfo_rootx(), ereignis.y_root - f.winfo_rooty()
+            f.grab_set()
+
+    def _ziehen(self, ereignis):
+        if self._drag is None:
+            return
+        x, y, platz_x, platz_y = self._platz()
+        links = min(platz_x, max(0, ereignis.x_root - self._drag[0] - x))
+        oben = min(platz_y, max(0, ereignis.y_root - self._drag[1] - y))
+        self._position = (links / platz_x if platz_x else 0, oben / platz_y if platz_y else 0)
+        self.fenster.geometry(f"+{x + links}+{y + oben}")
+
+    def _ziehen_ende(self, ereignis):
+        if self._drag is None:
+            return
+        self._ziehen(ereignis)
+        self._drag = None
+        self.fenster.grab_release()
+        self._verschieben = False
+        self._klickschutz()
+        self._verschiebe_knopf()
+        tmp = self._position_datei.with_suffix(".tmp")
+        try:
+            tmp.write_text(json.dumps(self._position), "utf-8")
+            tmp.replace(self._position_datei)
+        except OSError:
+            self.app.log("[!] Die Overlay-Position konnte nicht gespeichert werden.")
+
     def weg(self):
         if self.fenster is not None:
             try:
@@ -667,6 +755,9 @@ class Overlay:
 
     def _verstecken(self):
         if self.fenster is not None and self._sichtbar:
+            if self._drag is not None:
+                self.fenster.grab_release()
+                self._drag = None
             self.fenster.withdraw()
             self._sichtbar = False
 
@@ -691,13 +782,18 @@ class Overlay:
             if self.fenster is None:
                 return
         x, y = win32gui.ClientToScreen(hwnd, (0, 0))
-        _l, _t, _r, b = win32gui.GetClientRect(hwnd)
-        # Der Bot ist DPI-bewusst: Tk und Windows rechnen beide in echten Pixeln.
-        px, py = x + 12, y + int(b * 0.28)
+        _, _, breite, hoehe = win32gui.GetClientRect(hwnd)
+        self._spiel = x, y, breite, hoehe
         angeln = _produkt == "verzum" and hasattr(self.app, "_angel_ansicht") and self.app._angel_ansicht()
         self._inhalt_setzen(angeln)
-        hoehe = self.HOEHE + 18 if angeln else self.HOEHE
-        self.fenster.geometry(f"{self.BREITE}x{hoehe}+{px}+{py}")
+        if self._drag is None:
+            self.fenster.update_idletasks()
+            _, _, platz_x, platz_y = self._platz()
+            if self._position is None:
+                dx, dy = min(12, platz_x), min(round(hoehe * 0.28), platz_y)
+            else:
+                dx, dy = round(platz_x * self._position[0]), round(platz_y * self._position[1])
+            self.fenster.geometry(f"+{x + dx}+{y + dy}")
         if not self._sichtbar:
             self.fenster.deiconify()
             self.fenster.attributes("-topmost", True)

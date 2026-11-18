@@ -1,5 +1,7 @@
 """Lizenzgesteuerter Einstieg für die beiden separat kompilierten Produkte."""
+from contextlib import suppress
 import ctypes
+import json
 from pathlib import Path
 import threading
 import sys
@@ -70,11 +72,28 @@ def release_all(bot, app):
             pass
 
 
+def migrate_product_config(resource_dir, state_dir):
+    """Take an older installation's profiles into the shared product directory once."""
+    target = state_dir / "config.json"
+    source = resource_dir / "config.json"
+    if target.exists() or not source.is_file():
+        return
+    staging = state_dir / ".config-migration.tmp"
+    try:
+        with source.open("rb") as config:
+            data = config.read(1024 * 1024 + 1)
+        if len(data) <= 1024 * 1024 and isinstance(json.loads(data), dict):
+            staging.write_bytes(data)
+            staging.replace(target)
+    except (OSError, ValueError):
+        with suppress(OSError):
+            staging.unlink(missing_ok=True)
+
+
 def main(product):
     global _guard
     import auto_clicker as bot
     if "--self-test" in sys.argv:
-        import json
         # Interner Build-Test: keine Anmeldung, keine Spielfenstersuche, keine Eingaben.
         target = Path(sys.executable).parent / "self-test.json"
         from . import modmenu, i18n, texte, logos  # noqa: F401  (im Paket enthalten?)
@@ -122,6 +141,7 @@ def main(product):
         modmenu.anwenden(bot, product)
         if bot._schon_eine_instanz_offen():
             raise RuntimeError("Dieser SiroSix Bot läuft bereits.")
+        migrate_product_config(resource_dir, state_dir)
         root = bot.ctk.CTk()
         app = bot.App(root)
         app_holder.append(app)
