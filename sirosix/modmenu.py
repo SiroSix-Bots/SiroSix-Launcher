@@ -631,7 +631,8 @@ class Overlay:
         self._labels["zeit"].pack(side="right")
         unten = ctk.CTkFrame(rahmen, fg_color="transparent")
         unten.pack(fill="x", padx=8, pady=(1, 6))
-        self._labels["zahlen"] = ctk.CTkLabel(unten, text="", font=schrift, text_color=F.TEXT, height=18, anchor="w")
+        self._labels["zahlen"] = ctk.CTkLabel(unten, text="", font=schrift, text_color=F.TEXT,
+                                             height=18, anchor="w", justify="left")
         self._labels["zahlen"].pack(side="left")
         w.geometry(f"{self.BREITE}x{self.HOEHE}+-2000+-2000")
         w.deiconify()
@@ -693,27 +694,41 @@ class Overlay:
         _l, _t, _r, b = win32gui.GetClientRect(hwnd)
         # Der Bot ist DPI-bewusst: Tk und Windows rechnen beide in echten Pixeln.
         px, py = x + 12, y + int(b * 0.28)
-        self._inhalt_setzen()
-        self.fenster.geometry(f"+{px}+{py}")
+        angeln = _produkt == "verzum" and hasattr(self.app, "_angel_ansicht") and self.app._angel_ansicht()
+        self._inhalt_setzen(angeln)
+        hoehe = self.HOEHE + 18 if angeln else self.HOEHE
+        self.fenster.geometry(f"{self.BREITE}x{hoehe}+{px}+{py}")
         if not self._sichtbar:
             self.fenster.deiconify()
             self.fenster.attributes("-topmost", True)
             self._sichtbar = True
 
-    def _inhalt_setzen(self):
+    def _inhalt_setzen(self, angeln):
         F, app = _bot.F, self.app
         if app.laeuft:
-            farbe, status = F.GREEN, tr("Läuft")
+            if angeln and app._angel_wartet:
+                farbe, status = F.ACC, tr("Angeln wartet")
+            else:
+                farbe, status = F.GREEN, tr("Angeln" if angeln else "Läuft")
         elif app.lauf_start:
             farbe, status = F.RED, tr("Gestoppt")
         else:
             farbe, status = F.DIM, tr("Bereit")
         jetzt = time.time()
-        dauer = ((jetzt if app.laeuft else app.lauf_ende) - app.lauf_start) if app.lauf_start else 0
-        k = app.auto.kills
-        rate = k / dauer * 3600 if dauer >= 60 and k else 0
-        neu = {"status": status.upper(), "zeit": app._dauer(dauer) if app.lauf_start else "",
-               "zahlen": f"{tr('Metins')}: {k}   ·   {rate:.0f}/h"}
+        gleicher_modus = _produkt != "verzum" or angeln == getattr(app, "_angel_lauf", False)
+        lauf_start = app.lauf_start if gleicher_modus else 0
+        dauer = (jetzt if app.laeuft else app.lauf_ende) - lauf_start if lauf_start else 0
+        if angeln:
+            faenge = app._angel_stat[0] if gleicher_modus else 0
+            runden, rate = app._angel_rundenzahl(dauer)
+            rate_text = f"{rate:.0f}" if rate is not None else "…"
+            zahlen = (f"{tr('Angelrunden')}: {runden}   ·   {tr('Fänge')}: {faenge}\n"
+                      f"{tr('Angelrunden pro Stunde')}: {rate_text}")
+        else:
+            k = app.auto.kills if gleicher_modus else 0
+            rate = k / dauer * 3600 if dauer >= 60 and k else 0
+            zahlen = f"{tr('Metins')}: {k}   ·   {rate:.0f}/h"
+        neu = {"status": status.upper(), "zeit": app._dauer(dauer) if lauf_start else "", "zahlen": zahlen}
         for name, text in neu.items():
             if self._labels[name].cget("text") != text:
                 self._labels[name].configure(text=text)
